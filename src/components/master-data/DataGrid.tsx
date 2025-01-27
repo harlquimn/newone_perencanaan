@@ -19,27 +19,26 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  fetchData,
+  deleteData,
+  DataItem,
+  getTableName,
+  getCodeField,
+  getNameField,
+  getSasaranField,
+  getIndikatorField,
+  getSatuanField,
+} from "@/lib/api";
+import { toast } from "@/components/ui/use-toast";
 
 interface DataGridProps {
-  data?: Array<{
-    id: string;
-    code: string;
-    name: string;
-    parent?: string;
-  }>;
   onDataTypeChange?: (value: string) => void;
   onRowSelect?: (id: string) => void;
   selectedRows?: string[];
 }
 
-const mockData = [
-  { id: "1", code: "01", name: "Urusan Pemerintahan Wajib" },
-  { id: "2", code: "02", name: "Urusan Pemerintahan Pilihan" },
-  { id: "3", code: "03", name: "Urusan Pemerintahan Umum" },
-];
-
 const DataGrid = ({
-  data = mockData,
   onDataTypeChange = () => {},
   onRowSelect = () => {},
   selectedRows = [],
@@ -47,29 +46,94 @@ const DataGrid = ({
   const [showForm, setShowForm] = React.useState(false);
   const [formMode, setFormMode] = React.useState<"create" | "edit">("create");
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [data, setData] = React.useState<DataItem[]>([]);
+  const [selectedType, setSelectedType] = React.useState("urusan");
+  const [loading, setLoading] = React.useState(false);
+  const [selectedItem, setSelectedItem] = React.useState<DataItem | null>(null);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const tableName = getTableName(selectedType);
+      const result = await fetchData(tableName);
+      setData(result);
+    } catch (error) {
+      console.error("Error loading data:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load data",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    loadData();
+  }, [selectedType]);
 
   const handleAdd = () => {
+    setSelectedItem(null);
     setFormMode("create");
     setShowForm(true);
+    // Clear selected rows when adding new item
+    onRowSelect("");
   };
 
   const handleEdit = () => {
-    setFormMode("edit");
-    setShowForm(true);
+    const item = data.find((d) => d.id === selectedRows[0]);
+    if (item) {
+      setSelectedItem(item);
+      setFormMode("edit");
+      setShowForm(true);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedRows.length) return;
+
+    try {
+      const tableName = getTableName(selectedType);
+      await Promise.all(selectedRows.map((id) => deleteData(tableName, id)));
+      toast({
+        title: "Success",
+        description: "Items deleted successfully",
+      });
+      loadData();
+    } catch (error) {
+      console.error("Error deleting items:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete items",
+      });
+    }
+  };
+
+  const handleTypeChange = (value: string) => {
+    setSelectedType(value);
+    onDataTypeChange(value);
   };
 
   const filteredData = data.filter(
     (item) =>
-      item.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()),
+      item[getCodeField(getTableName(selectedType))]
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      item[getNameField(getTableName(selectedType))]
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()),
   );
 
   return (
     <div className="w-full h-full bg-white flex flex-col">
       <DataToolbar
+        selectedDataType={selectedType}
         onAdd={handleAdd}
         onEdit={handleEdit}
-        onDataTypeChange={onDataTypeChange}
+        onDelete={handleDelete}
+        onDataTypeChange={handleTypeChange}
         canEdit={selectedRows.length === 1}
         canDelete={selectedRows.length > 0}
       />
@@ -86,35 +150,69 @@ const DataGrid = ({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[100px]">Code</TableHead>
-                <TableHead>Name</TableHead>
+                <TableHead>Kode Rekening</TableHead>
+                <TableHead>Nomenkelatur</TableHead>
+                <TableHead>Sasaran</TableHead>
+                <TableHead>Indikator</TableHead>
+                <TableHead>Satuan</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredData.map((row) => (
-                <TableRow
-                  key={row.id}
-                  className={selectedRows.includes(row.id) ? "bg-muted" : ""}
-                  onClick={() => onRowSelect(row.id)}
-                >
-                  <TableCell>{row.code}</TableCell>
-                  <TableCell>{row.name}</TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRowSelect(row.id);
-                        handleEdit();
-                      }}
-                    >
-                      Edit
-                    </Button>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center">
+                    Loading...
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : filteredData.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center">
+                    No data found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredData.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    className={selectedRows.includes(row.id) ? "bg-muted" : ""}
+                    onClick={() => onRowSelect(row.id)}
+                  >
+                    <TableCell>
+                      {row[getCodeField(getTableName(selectedType))]}
+                    </TableCell>
+                    <TableCell>
+                      {row[getNameField(getTableName(selectedType))]}
+                    </TableCell>
+                    <TableCell>
+                      {row[getSasaranField(getTableName(selectedType))]?.join(
+                        ", ",
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {row[getIndikatorField(getTableName(selectedType))]?.join(
+                        ", ",
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {row[getSatuanField(getTableName(selectedType))]}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRowSelect(row.id);
+                          handleEdit();
+                        }}
+                      >
+                        Edit
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
@@ -129,12 +227,6 @@ const DataGrid = ({
                 <PaginationLink href="#">1</PaginationLink>
               </PaginationItem>
               <PaginationItem>
-                <PaginationLink href="#">2</PaginationLink>
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationLink href="#">3</PaginationLink>
-              </PaginationItem>
-              <PaginationItem>
                 <PaginationNext href="#" />
               </PaginationItem>
             </PaginationContent>
@@ -144,9 +236,13 @@ const DataGrid = ({
 
       <DataForm
         open={showForm}
-        onClose={() => setShowForm(false)}
+        onClose={() => {
+          setShowForm(false);
+          loadData();
+        }}
         mode={formMode}
-        type="urusan"
+        type={selectedType}
+        initialData={selectedItem}
       />
     </div>
   );
