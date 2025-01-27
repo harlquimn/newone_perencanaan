@@ -1,6 +1,7 @@
 import React from "react";
 import Sidebar from "./layout/Sidebar";
 import DataGrid from "./master-data/DataGrid";
+import RenstraGrid from "./renstra/RenstraGrid";
 
 interface HomeProps {
   onNavigate?: (path: string) => void;
@@ -42,11 +43,19 @@ const Home = ({
         </div>
 
         <div className="rounded-lg border bg-white shadow">
-          <DataGrid
-            onDataTypeChange={setSelectedDataType}
-            onRowSelect={handleRowSelect}
-            selectedRows={selectedRows}
-          />
+          {activePath === "/master-data" ? (
+            <DataGrid
+              onDataTypeChange={setSelectedDataType}
+              onRowSelect={handleRowSelect}
+              selectedRows={selectedRows}
+            />
+          ) : activePath === "/renstra" ? (
+            <RenstraGrid
+              onDataTypeChange={setSelectedDataType}
+              onRowSelect={handleRowSelect}
+              selectedRows={selectedRows}
+            />
+          ) : null}
         </div>
       </main>
     </div>
