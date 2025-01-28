@@ -2,6 +2,7 @@ import React from "react";
 import Sidebar from "./layout/Sidebar";
 import DataGrid from "./master-data/DataGrid";
 import RenstraGrid from "./renstra/RenstraGrid";
+import Dashboard from "./dashboard/Dashboard";
 
 interface HomeProps {
   onNavigate?: (path: string) => void;
@@ -10,12 +11,9 @@ interface HomeProps {
   onSidebarToggle?: () => void;
 }
 
-const Home = ({
-  onNavigate = () => {},
-  activePath = "/master-data",
-  sidebarExpanded = true,
-  onSidebarToggle = () => {},
-}: HomeProps) => {
+const Home = () => {
+  const [activePath, setActivePath] = React.useState("/dashboard");
+  const [sidebarExpanded, setSidebarExpanded] = React.useState(true);
   const [selectedRows, setSelectedRows] = React.useState<string[]>([]);
   const [selectedDataType, setSelectedDataType] = React.useState("urusan");
 
@@ -29,34 +27,52 @@ const Home = ({
     <div className="flex h-screen w-full bg-gray-100">
       <Sidebar
         expanded={sidebarExpanded}
-        onNavigate={onNavigate}
+        onNavigate={setActivePath}
         activePath={activePath}
         className="h-screen"
       />
 
       <main className="flex-1 overflow-auto p-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold">Master Data Management</h1>
+          <h1 className="text-2xl font-semibold">
+            {activePath === "/dashboard"
+              ? "Dashboard"
+              : activePath === "/master-data"
+                ? "Master Data Management"
+                : activePath === "/renstra"
+                  ? "Renstra Management"
+                  : ""}
+          </h1>
           <p className="text-gray-500">
-            Manage your hierarchical data structure
+            {activePath === "/dashboard"
+              ? "Overview of your system"
+              : activePath === "/master-data"
+                ? "Manage your hierarchical data structure"
+                : activePath === "/renstra"
+                  ? "Manage your strategic planning"
+                  : ""}
           </p>
         </div>
 
-        <div className="rounded-lg border bg-white shadow">
-          {activePath === "/master-data" ? (
-            <DataGrid
-              onDataTypeChange={setSelectedDataType}
-              onRowSelect={handleRowSelect}
-              selectedRows={selectedRows}
-            />
-          ) : activePath === "/renstra" ? (
-            <RenstraGrid
-              onDataTypeChange={setSelectedDataType}
-              onRowSelect={handleRowSelect}
-              selectedRows={selectedRows}
-            />
-          ) : null}
-        </div>
+        {activePath === "/dashboard" ? (
+          <Dashboard />
+        ) : (
+          <div className="rounded-lg border bg-white shadow">
+            {activePath === "/master-data" ? (
+              <DataGrid
+                onDataTypeChange={setSelectedDataType}
+                onRowSelect={handleRowSelect}
+                selectedRows={selectedRows}
+              />
+            ) : activePath === "/renstra" ? (
+              <RenstraGrid
+                onDataTypeChange={setSelectedDataType}
+                onRowSelect={handleRowSelect}
+                selectedRows={selectedRows}
+              />
+            ) : null}
+          </div>
+        )}
       </main>
     </div>
   );

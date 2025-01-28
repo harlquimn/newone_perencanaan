@@ -52,10 +52,21 @@ const RenstraGrid = ({
     try {
       setLoading(true);
       const tableName = getTableName(selectedType);
-      const { data: result, error } = await supabase
+      let query = supabase
         .from(tableName)
         .select("*")
         .order(`renstra_kode_rek_${selectedType}`, { ascending: true });
+
+      // Add parent data if needed
+      if (selectedType === "program") {
+        query = query.select("*, renstra_urusan!inner(*)");
+      } else if (selectedType === "kegiatan") {
+        query = query.select("*, renstra_prog!inner(*)");
+      } else if (selectedType === "sub-kegiatan") {
+        query = query.select("*, renstra_keg!inner(*)");
+      }
+
+      const { data: result, error } = await query;
 
       if (error) throw error;
       setData(result || []);

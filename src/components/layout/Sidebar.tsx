@@ -27,21 +27,25 @@ const menuItems = [
     name: "Dashboard",
     icon: LayoutDashboard,
     path: "/dashboard",
+    enabled: true,
   },
   {
     name: "Master Data",
     icon: Database,
     path: "/master-data",
+    enabled: true,
   },
   {
     name: "Renstra",
     icon: FileText,
     path: "/renstra",
+    enabled: true,
   },
   {
     name: "Renja",
     icon: Calendar,
     path: "/renja",
+    enabled: false,
   },
 ];
 
@@ -89,8 +93,10 @@ const Sidebar = ({
                       className={cn(
                         "w-full justify-start",
                         !expanded && "justify-center",
+                        !item.enabled && "opacity-50 cursor-not-allowed",
                       )}
-                      onClick={() => onNavigate(item.path)}
+                      onClick={() => item.enabled && onNavigate(item.path)}
+                      disabled={!item.enabled}
                     >
                       <item.icon className="h-5 w-5" />
                       {expanded && <span className="ml-3">{item.name}</span>}
